@@ -29,7 +29,7 @@ char* chaine;
 %%
 S: DEC INST{printf("Programme syntaxiquement correcte\n"); YYACCEPT;}
 ;
-DEC: TYPE LISTEIDF DEC 
+DEC: TYPE espace LISTEIDF DEC 
    |TYPE LISTEVAL DEC
    |
 ;
@@ -60,8 +60,8 @@ OP: plus
 ;
 COMP: EXP OUTILCOMP EXP
 ;	
-OPERANDE: idf
-		|valE
+OPERANDE: idf{strCopy(valQuad,$1);}
+		|valE{sprintf(valQuad, "%d" , $1);}
 ;
 OUTILCOMP: supegal
 		| infegal
@@ -71,14 +71,15 @@ OUTILCOMP: supegal
 		| egal
 ;		
 		
-IF: mc_if CONDITION dp retour tabulation INST
+IF: mc_if CONDITION SUITE
 ;
-ELIF: mc_elif CONDITION dp retour tabulation INST
+ELIF: mc_elif CONDITION SUITE
 ;
-ELSE: mc_else dp retour tabulation INST
+ELSE: mc_else SUITE
 ;
 CONDITION: parouvr COMP parferm
-;
+
+SUITE: dp retour tabulation INST
 		
 %%
 

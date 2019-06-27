@@ -1,1 +1,1 @@
-int Abc=10
+int A
