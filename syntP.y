@@ -11,7 +11,8 @@ int saveIf=0;
 int saveElif=0;
 int saveElse=0;
 int saveFinIf=0;
-
+char saveOp = null;
+int quadOp = 0;
 %}
 
 %token <chaine>idf <chaine>comentaire <chaine>mc_entier dp <chaine>mc_if <chaine>mc_elif <chaine>mc_else <entier>valE egal moins virgule 
@@ -47,21 +48,27 @@ INST: AFFEC retour
 		|
 		
 ;		
-AFFEC: idf aff EXP
+AFFEC: idf aff EXP{quadr("=",$3,"",$1);}
 ;
-EXP: OPERANDE OP EXP
-	|OPERANDE
-	|parouvr OPERANDE OP EXP parferm
+EXP: A EXP
+	|B
+	|C EXP parferm
 ;
-OP: plus
-	|moins
-	|divis
-	|fois
+A: B OP{quadOp = qc; quadr(saveOP, "", "", ""); }
+;
+B:OPERANDE{ajour_quad(quadOp)}
+;
+C:parouvr A
+;
+OP: plus{strcpy(saveOP, "+");}
+	|moins{strcpy(saveOP, "-");}
+	|divis{strcpy(saveOP, "/");}
+	|fois{strcpy(saveOP, "*");}
 ;
 COMP: EXP OUTILCOMP EXP
 ;	
-OPERANDE: idf{strCopy(valQuad,$1);}
-		|valE{sprintf(valQuad, "%d" , $1);}
+OPERANDE: idf
+		|valE
 ;
 OUTILCOMP: supegal
 		| infegal

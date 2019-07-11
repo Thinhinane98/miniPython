@@ -765,12 +765,12 @@ YY_RULE_SETUP
 case 23:
 YY_RULE_SETUP
 #line 51 "lexicalP.l"
-{nb_colonne = nb_colonne + yyleng; return espace;}
+{nb_colonne = nb_colonne + yyleng;}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
 #line 52 "lexicalP.l"
-{nb_ligne+=yyleng; nb_colonne = 0; return retour ;}
+{nb_ligne+=yyleng; nb_colonne = 0;}
 	YY_BREAK
 case 25:
 YY_RULE_SETUP

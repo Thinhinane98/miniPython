@@ -48,8 +48,8 @@ else {nb_colonne = nb_colonne + yyleng; return mc_else ;}
 	
 	 nb_colonne = nb_colonne + yyleng;
 	 return valE;}
-{espace} {nb_colonne = nb_colonne + yyleng; return espace;}
-{retour} {nb_ligne+=yyleng; nb_colonne = 0; return retour ;}
+{espace} {nb_colonne = nb_colonne + yyleng;}
+{retour} {nb_ligne+=yyleng; nb_colonne = 0;}
 {tabulation} {nb_colonne+=yyleng;return tabulation;}
 . {printf("erreur lexicale ligne %d colonne %d\n", numLigne(), numCol());}
 
