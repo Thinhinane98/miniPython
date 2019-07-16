@@ -1,9 +1,11 @@
-int A=2,B=5
+int A=2,B=5,X=0
 int H,J
 Mika=7
 Nasser=Mika+106
 Fhamt=0
 if(X==2):
-	if(X==1):
-		L=3
+	elif(Fhamt==10):
+		L=5
+	else:
+		L=10
 FIN

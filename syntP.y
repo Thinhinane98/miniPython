@@ -80,8 +80,8 @@ INSTRU : INST  INSTRU
        | 
        ;
 
-INST: AFFEC retour 
-	| IF  ELSEIF
+INST: AFFEC retour
+	| IF
 	
 ;		
 ELSEIF : {sprintf(temp,"%d",qc+1);
@@ -164,7 +164,8 @@ OPERANDE: idf {$$.val=malloc(sizeof(20));sprintf($$.val,"%s",$1);}
 		|valE {$$.val=malloc(sizeof(20));sprintf($$.val,"%d",$1);}
 ;	
 		
-IF: mc_if CONDITION  dp retour TAB {printf("zebi\n");} INST
+IF: mc_if CONDITION  dp retour TAB {printf(" un if\n");} ELSEIF INST
+
 ;
 ELIF: mc_elif CONDITION dp retour TAB INST{
 	sprintf(temp,"%d",qc+1);
