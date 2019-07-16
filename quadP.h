@@ -75,6 +75,20 @@ void pushQuad(StackQuad* S,ListQuad quad);
 ListQuad quadAfter(ListQuad p, char* opr,char* op1,char* op2,char* res);
 ListQuad removeQuadAff(char* res);
 ListQuad removeQuadRef( ListQuad p);
+void redundantExpressions( ListQuad LQ);
+void expressionPropagation(ListQuad LQ);
+void simplifyCalculations(ListQuad LQ);
+void variablePropagation(ListQuad LQ);
+void expressionPropagation(ListQuad LQ);
+int isArithmeticOperation(ListQuad p);
+int isAssignationOperation(ListQuad p);
+void updateQuadsFor(int pos, int action);
+int getQuadPosition(ListQuad p);
+int isNumber(char* ch);
+void replaceTempBy(char* oldTemp, char* newTemp);
+int isEmptyQuad(StackQuad S);
+int isJumpOperation(ListQuad p);
+
 
 ListQuad LQ = NULL;
 
@@ -88,6 +102,7 @@ void optimize( ListQuad LQ){
     expressionPropagation(LQ);
     simplifyCalculations(LQ);
     variablePropagation(LQ);
+    
 
     if(!LQ) printf("pdr\n");
    // if(nbtrys==100){nbtrys=0; break;}
