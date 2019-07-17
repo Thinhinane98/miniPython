@@ -59,7 +59,7 @@ struct s {char * val; int type;}s;
 %left infegal supegal superieur inferieur egal different
 %left plus moins
 %left fois divis
-%type <s> EXP  OPERANDE EXPRIO
+%type <s> EXP  OPERANDE EXPRR
 %start S
 %%
 S: DEC INSTRU FIN{ YYACCEPT;}
@@ -86,14 +86,7 @@ INST: AFFEC retour
 ;		
 ELSEIF : {sprintf(temp,"%d",qc+1);
 	ajour_quad(sauv[cptsauv-1],1,temp);
-	 cptsauv--; sauvfin[cptsauvfin]=qc;cptsauvfin++;quadr("BR"," "," "," ");} ELIF{sauvfineif[cptfinelif]=qc;cptfinelif++;quadr("BR"," "," "," ");}ELSE{
-						sprintf(temp,"%d",qc);			
-						ajour_quad(sauvfin[cptsauvfin-1],1,temp);
-						cptsauvfin--;
-						ajour_quad(sauvfineif[cptfinelif-1],1,temp);
-						cptfinelif--;
-						
-				} 
+	 cptsauv--; sauvfin[cptsauvfin]=qc;cptsauvfin++;quadr("BR"," "," "," ");} ELIF{sauvfineif[cptfinelif]=qc;cptfinelif++;quadr("BR"," "," "," ");}
 		|{sprintf(temp,"%d",qc);
 		ajour_quad(sauv[cptsauv-1],1,temp);
 	 cptsauv--;
@@ -101,30 +94,30 @@ ELSEIF : {sprintf(temp,"%d",qc+1);
 ;
 AFFEC: idf aff EXP{quadr("=",$3.val," ",$1);}
 ;
-EXP: EXP plus EXPRIO{
+EXP: EXP plus EXPRR{
 	sprintf(temp,"T%d",tempor);
 	tempor++;
 	quadr("+",$1.val,$3.val,temp);
 	$$.val=malloc(sizeof(20));strcpy($$.val,temp);
 }
 	
-	|EXP moins EXPRIO{
+	|EXP moins EXPRR{
 	sprintf(temp,"T%d",tempor);
 	tempor++;
 	quadr("-",$1.val,$3.val,temp);
 	$$.val=malloc(sizeof(20));strcpy($$.val,temp);
 	}
-	|EXPRIO {
+	|EXPRR {
 		$$.val=malloc(sizeof(20));strcpy($$.val,$1.val);
 	}
 ;
-EXPRIO: EXPRIO fois OPERANDE{
+EXPRR: EXPRR fois OPERANDE{
 	sprintf(temp,"T%d",tempor);
 	tempor++;
 	quadr("*",$1.val,$3.val,temp);
 	$$.val=malloc(sizeof(20));strcpy($$.val,temp);
 }
-	|EXPRIO divis OPERANDE{
+	|EXPRR divis OPERANDE{
 	sprintf(temp,"T%d",tempor);
 	tempor++;
 	quadr("/",$1.val,$3.val,temp);
@@ -136,7 +129,6 @@ COMP: EXP opr EXP{  sauv[cptsauv]=qc;
 					cptsauv++;
                                 if(strcmp($2,"<")==0){
                                 quadr("BGE","",$1.val,$3.val);
-                                
                                 }
                                 if(strcmp($2,"==")==0) {
                                   quadr("BNE","",$1.val,$3.val);
@@ -164,17 +156,27 @@ OPERANDE: idf {$$.val=malloc(sizeof(20));sprintf($$.val,"%s",$1);}
 		|valE {$$.val=malloc(sizeof(20));sprintf($$.val,"%d",$1);}
 ;	
 		
-IF: mc_if CONDITION  dp retour TAB {printf(" un if\n");} ELSEIF INST
+IF: mc_if CONDITION  dp retour TAB {printf(" un if\n");} INST  ELSEIF
 
 ;
 ELIF: mc_elif CONDITION dp retour TAB INST{
 	sprintf(temp,"%d",qc+1);
 	ajour_quad(sauv[cptsauv-1],1,temp);
 	cptsauv--;
-}
+} SINON;
+
+SINON : ELSEIF | ELSE{
+						sprintf(temp,"%d",qc);			
+						ajour_quad(sauvfin[cptsauvfin-1],1,temp);
+						cptsauvfin--;
+						ajour_quad(sauvfineif[cptfinelif-1],1,temp);
+						cptfinelif--;
+						
+				} 
+
 ;
 TAB: tabulation TAB | tabulation
-ELSE: mc_else dp retour tabulation INST
+ELSE: mc_else dp retour tabulation INST | 
 ;
 CONDITION: parouvr COMP parferm
 ;
@@ -189,8 +191,8 @@ yyin=fopen("test.txt","r");
 if(yyin==NULL){ printf("erreur d'ouverture");}
 yyparse();
 afficher_qdr();
-tableToListe();
- generationCodeOBJ(); 
+convertirTab();
+generationCodeOBJ(); 
 printf("\n \n");
 
 

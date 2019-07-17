@@ -1,11 +1,10 @@
 int A=2,B=5,X=0
-int H,J
-Mika=7
-Nasser=Mika+106
-Fhamt=0
-if(X==2):
-	elif(Fhamt==10):
-		L=5
-	else:
-		L=10
+if(A>=5):
+	B=B*2
+elif(A<10):
+	B=B-1
+elif(A<10):
+	B=B*B
+else:
+	B=B+2
 FIN

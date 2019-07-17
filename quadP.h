@@ -22,11 +22,11 @@ typedef struct ElementQuad ElementQuad;
 typedef ElementQuad* ListQuad;
 
 typedef struct ElementQ ElementQ;
-typedef ElementQ* StackQuad;
+typedef ElementQ* PileQuad;
 
 struct ElementQ{
     ListQuad quad;
-    StackQuad next;
+    PileQuad suivant;
 };
 
 struct ElementQuad { 
@@ -34,7 +34,7 @@ struct ElementQuad {
     char* op1;           
     char* op2;           
     char* res;
-    ListQuad next;
+    ListQuad suivant;
 };
 void quadr(char opr[],char op1[],char op2[],char res[])
 {
@@ -49,7 +49,7 @@ qc++;
 
 }
 void ajour_quad(int num_quad, int colon_quad, char val [])
-{ //printf("le quad num %d est ajoure avec %s\n",num_quad,val );
+{ 
 if (colon_quad==0)    strcpy(quad[num_quad].oper ,  val);
 else if (colon_quad==1)   strcpy(quad[num_quad].op1  ,  val);
          else if (colon_quad==2)    strcpy(quad[num_quad].op2  ,   val);
@@ -70,51 +70,43 @@ for(i=0;i<qc+1;i++)
 }
 
 
-ListQuad popQuad(StackQuad* S);
-void pushQuad(StackQuad* S,ListQuad quad);
-ListQuad quadAfter(ListQuad p, char* opr,char* op1,char* op2,char* res);
-ListQuad removeQuadAff(char* res);
-ListQuad removeQuadRef( ListQuad p);
-void redundantExpressions( ListQuad LQ);
-void expressionPropagation(ListQuad LQ);
-void simplifyCalculations(ListQuad LQ);
-void variablePropagation(ListQuad LQ);
-void expressionPropagation(ListQuad LQ);
-int isArithmeticOperation(ListQuad p);
-int isAssignationOperation(ListQuad p);
-void updateQuadsFor(int pos, int action);
-int getQuadPosition(ListQuad p);
-int isNumber(char* ch);
-void replaceTempBy(char* oldTemp, char* newTemp);
-int isEmptyQuad(StackQuad S);
-int isJumpOperation(ListQuad p);
+ListQuad depilerQuad(PileQuad* S);
+void empilerQuad(PileQuad* S,ListQuad quad);
+ListQuad quadSuiv(ListQuad p, char* opr,char* op1,char* op2,char* res);
+ListQuad suppQuad( ListQuad p);
+void expressionsRedondantes( ListQuad LQ);
+void expressionsPropagation(ListQuad LQ);
+void simplifierCalculs(ListQuad LQ);
+void variablesPropagation(ListQuad LQ);
+int estExpressionArithmetique(ListQuad p);
+int estAffectation(ListQuad p);
+void modifierQuad(int pos, int action);
+int positionQuad(ListQuad p);
+int estNombre(char* ch);
+void remplacer(char* enc, char* nouv);
+int quadVide(PileQuad S);
+int estBranchement(ListQuad p);
 
 
 ListQuad LQ = NULL;
 
 
-void optimize( ListQuad LQ){
+void optimiser( ListQuad LQ){
+	int a=qc1;
+    expressionsRedondantes(LQ);
+    expressionsPropagation(LQ);
+    simplifierCalculs(LQ);
+    variablesPropagation(LQ);
+    if(!LQ) printf("vide\n");
+}
 
-   int a=qc1;
-   //while(1){
-   // nbtrys++;
-    redundantExpressions(LQ);
-    expressionPropagation(LQ);
-    simplifyCalculations(LQ);
-    variablePropagation(LQ);
-    
-
-    if(!LQ) printf("pdr\n");
-   // if(nbtrys==100){nbtrys=0; break;}
-/*}*/}
-
-void afficherQuadListOpt(){
+void afficherQuadOptimises(){
   int i=0;
     ListQuad q = LQ;
     printf("********************* Les Quadruplets opt***********************\n");
     while(q!=NULL){
     printf("%d - (%s,%s,%s,%s)\n",i++,q->opr,q->op1,q->op2,q->res);
-        q = q->next;
+        q = q->suivant;
   }
   
   printf("\n");
@@ -122,27 +114,27 @@ void afficherQuadListOpt(){
 
 
 void quadlist(char* opr,char* op1,char* op2,char* res){
-    ListQuad newElement = (ListQuad) malloc( sizeof(ElementQuad));
+    ListQuad nouvelElt = (ListQuad) malloc( sizeof(ElementQuad));
     
-    newElement->opr = opr;
-    newElement->op1 = op1;
-    newElement->op2 = op2;
-    newElement->res = res;
-    newElement->next = NULL;
+    nouvelElt->opr = opr;
+    nouvelElt->op1 = op1;
+    nouvelElt->op2 = op2;
+    nouvelElt->res = res;
+    nouvelElt->suivant = NULL;
     
     if(LQ == NULL){
-        LQ=newElement;
+        LQ=nouvelElt;
     }else{
         ListQuad q = LQ;
-        while(q->next!=NULL){
-            q=q->next;
+        while(q->suivant!=NULL){
+            q=q->suivant;
         }
-        q->next = newElement;
+        q->suivant = nouvelElt;
     }
 }
 
 
-void tableToListe(){
+void convertirTab(){
 
   char* oper= NULL;
   char* op1= NULL;
@@ -166,9 +158,9 @@ for (i = 0; i < qc; ++i)
 qc1=qc;
 
 
-optimize(LQ);
+optimiser(LQ);
 
-afficherQuadListOpt();
+afficherQuadOptimises();
 
 
 
@@ -176,66 +168,230 @@ afficherQuadListOpt();
 }
 
 
-//opt
+//**************************************************
+//**************************************************
 
 
 
-void expressionPropagation(ListQuad LQ){
+
+int estAffectation(ListQuad p){
+    return !strcmp(p->opr,"=");
+}
+
+int estBranchement(ListQuad p){
+    return !strcmp(p->opr,"BR")||!strcmp(p->opr,"BE")||!strcmp(p->opr,"BNE")||!strcmp(p->opr,"BG")||!strcmp(p->opr,"BGE")||!strcmp(p->opr,"BL")||!strcmp(p->opr,"BLE");
+}
+
+
+
+void simplifierCalculs(ListQuad LQ){
+    ListQuad p;
+    while(LQ!=NULL){
+        if(!strcmp(LQ->opr,"*")){
+            if(estNombre(LQ->op1)&&!estNombre(LQ->op2)){
+                int n = atoi(LQ->op1);
+                
+                if(n>1&&n<=10){
+                    modifierQuad(positionQuad(LQ->suivant),INSERTION);
+                    p = quadSuiv(LQ,"+",LQ->op2,LQ->op2,LQ->res);
+                    n--;
+                    while(n>1){
+                        modifierQuad(positionQuad(p->suivant),INSERTION);
+                        p = quadSuiv(p,"+",LQ->op2,LQ->res,LQ->res);
+                        n--;
+                    }
+                    
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                }else if(n==1){
+                    remplacer(LQ->res,LQ->op2);
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                }
+            }else if(estNombre(LQ->op2)&&!estNombre(LQ->op1)){
+                int n = atoi(LQ->op2);
+                
+                if(n>1&&n<=10){
+                    modifierQuad(positionQuad(LQ->suivant),INSERTION);
+                    p = quadSuiv(LQ,"+",LQ->op1,LQ->op1,LQ->res);
+                    n--;
+                    while(n>1){
+                        modifierQuad(positionQuad(p->suivant),INSERTION);
+                        p = quadSuiv(p,"+",LQ->op1,LQ->res,LQ->res);
+                        n--;
+                    }
+                    
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                }else if(n==1){
+                    remplacer(LQ->res,LQ->op1);
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                }
+            }else{
+                int n1 = atoi(LQ->op1);
+                int n2 = atoi(LQ->op2);
+                
+                if(n1==1){
+                    remplacer(LQ->res,LQ->op2);
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                }else if(n2==1){
+                    remplacer(LQ->res,LQ->op1);
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                }else if(n1>1&&n1<=10){
+                    modifierQuad(positionQuad(LQ->suivant),INSERTION);
+                    p = quadSuiv(LQ,"+",LQ->op2,LQ->op2,LQ->res);
+                    n1--;
+                    while(n1>1){
+                        modifierQuad(positionQuad(p->suivant),INSERTION);
+                        p = quadSuiv(p,"+",LQ->op2,LQ->res,LQ->res);
+                        n1--;
+                    }
+                    
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                }else if(n2>1&&n2<=10){
+                    modifierQuad(positionQuad(LQ->suivant),INSERTION);
+                    p = quadSuiv(LQ,"+",LQ->op2,LQ->op2,LQ->res);
+                    n2--;
+                    while(n2>1){
+                        modifierQuad(positionQuad(p->suivant),INSERTION);
+                        p = quadSuiv(p,"+",LQ->op2,LQ->res,LQ->res);
+                        n2--;
+                    }
+                    
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                    
+                }
+                
+            }
+            
+            LQ = LQ->suivant;
+            
+        }else if(!strcmp(LQ->opr,"+")){
+            if(estNombre(LQ->op1)){
+                int n = atoi(LQ->op1);
+                
+                if(n==0){
+                    remplacer(LQ->res,LQ->op2);
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                }
+            }
+            if(estNombre(LQ->op2)){
+                int n = atoi(LQ->op2);
+                
+                if(n==0){
+                    remplacer(LQ->res,LQ->op1);
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                    continue;
+                }
+            }
+                LQ = LQ->suivant;
+            
+        }else if(!strcmp(LQ->opr,"-")&&strcmp(LQ->op2,"")){
+            if(estNombre(LQ->op2)){
+                int n = atoi(LQ->op2);
+                
+                if(n==0){
+                    remplacer(LQ->res,LQ->op1);
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                }else{
+                    LQ = LQ->suivant;
+                }
+            }else{
+                LQ = LQ->suivant;
+            }
+        }else if(!strcmp(LQ->opr,"/")){
+            if(estNombre(LQ->op2)){
+                int n = atoi(LQ->op2);
+                
+                if(n==1){
+                    remplacer(LQ->res,LQ->op1);
+                    modifierQuad(positionQuad(LQ),SUPPRESSION);
+                    LQ = suppQuad(LQ);
+                }else{
+                    LQ = LQ->suivant;
+                }
+            }else{
+                LQ = LQ->suivant;
+            }
+        }else{
+            LQ = LQ->suivant;
+        }
+        
+    }
+}
+void expressionsPropagation(ListQuad LQ){
     ListQuad p,q,s,r,t;
     char* temp1;
     char* temp2;
     int isConstant;
-    StackQuad SQ = NULL;
+    PileQuad SQ = NULL;
     
     q=LQ;
     
     while(LQ != NULL){
-        if(!isArithmeticOperation(LQ)){   
-            q = LQ->next;
-            LQ = LQ->next;
+        if(!estExpressionArithmetique(LQ)){   
+            q = LQ->suivant;
+            LQ = LQ->suivant;
             continue;
         }
         
-        r = LQ->next;
+        r = LQ->suivant;
         isConstant = 1;
         
        
         
         
-        if(r!=NULL&&isAssignationOperation(r)&&isConstant){
-            p = r->next;
+        if(r!=NULL&&estAffectation(r)&&isConstant){
+            p = r->suivant;
             
             while(p!=NULL){
-                if(isAssignationOperation(p)){
-                    if(!strcmp(p->res,r->res)){//On ne fait pas l'optimisation car x a changé
-                        p = p->next;
+                if(estAffectation(p)){
+                    if(!strcmp(p->res,r->res)){
+                        p = p->suivant;
                     }else if(!strcmp(p->op1,r->res)){
                         s = p;
                         while(q!=r){
-                            updateQuadsFor(getQuadPosition(s->next),INSERTION);
-                            s = quadAfter(s,q->opr,q->op1,q->op2,q->res);
-                            q = q->next;
+                            modifierQuad(positionQuad(s->suivant),INSERTION);
+                            s = quadSuiv(s,q->opr,q->op1,q->op2,q->res);
+                            q = q->suivant;
                         }
-                            updateQuadsFor(getQuadPosition(s->next),INSERTION);
-                            s = quadAfter(s,q->opr,q->op1,q->op2,q->res);
+                            modifierQuad(positionQuad(s->suivant),INSERTION);
+                            s = quadSuiv(s,q->opr,q->op1,q->op2,q->res);
                             s->res = strdup(p->res);
-                            updateQuadsFor(getQuadPosition(p),SUPPRESSION);
-                            p = removeQuadRef(p);
+                            modifierQuad(positionQuad(p),SUPPRESSION);
+                            p = suppQuad(p);
                             LQ = p;
                             break;
                         
                     }else{
-                        p = p->next;
-                    }p = p->next;
+                        p = p->suivant;
+                    }p = p->suivant;
                 }else{
-                    p = p->next;
+                    p = p->suivant;
                 }
             }
             
-            LQ = r->next;
+            LQ = r->suivant;
         }else{
             if(r!=NULL){
-                LQ = r->next;
+                LQ = r->suivant;
             }else{
                 LQ = NULL;
             }
@@ -244,172 +400,15 @@ void expressionPropagation(ListQuad LQ){
     }
 }
 
-
-
-
-
-void simplifyCalculations(ListQuad LQ){
-    ListQuad p;
-    while(LQ!=NULL){
-        if(!strcmp(LQ->opr,"*")){
-            if(isNumber(LQ->op1)&&!isNumber(LQ->op2)){
-                int n = atoi(LQ->op1);
-                
-                if(n>1&&n<=10){
-                    updateQuadsFor(getQuadPosition(LQ->next),INSERTION);
-                    p = quadAfter(LQ,"+",LQ->op2,LQ->op2,LQ->res);
-                    n--;
-                    while(n>1){
-                        updateQuadsFor(getQuadPosition(p->next),INSERTION);
-                        p = quadAfter(p,"+",LQ->op2,LQ->res,LQ->res);
-                        n--;
-                    }
-                    
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                }else if(n==1){
-                    replaceTempBy(LQ->res,LQ->op2);
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                }
-            }else if(isNumber(LQ->op2)&&!isNumber(LQ->op1)){
-                int n = atoi(LQ->op2);
-                
-                if(n>1&&n<=10){
-                    updateQuadsFor(getQuadPosition(LQ->next),INSERTION);
-                    p = quadAfter(LQ,"+",LQ->op1,LQ->op1,LQ->res);
-                    n--;
-                    while(n>1){
-                        updateQuadsFor(getQuadPosition(p->next),INSERTION);
-                        p = quadAfter(p,"+",LQ->op1,LQ->res,LQ->res);
-                        n--;
-                    }
-                    
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                }else if(n==1){
-                    replaceTempBy(LQ->res,LQ->op1);
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                }
-            }else{
-                int n1 = atoi(LQ->op1);
-                int n2 = atoi(LQ->op2);
-                
-                if(n1==1){
-                    replaceTempBy(LQ->res,LQ->op2);
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                }else if(n2==1){
-                    replaceTempBy(LQ->res,LQ->op1);
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                }else if(n1>1&&n1<=10){
-                    updateQuadsFor(getQuadPosition(LQ->next),INSERTION);
-                    p = quadAfter(LQ,"+",LQ->op2,LQ->op2,LQ->res);
-                    n1--;
-                    while(n1>1){
-                        updateQuadsFor(getQuadPosition(p->next),INSERTION);
-                        p = quadAfter(p,"+",LQ->op2,LQ->res,LQ->res);
-                        n1--;
-                    }
-                    
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                }else if(n2>1&&n2<=10){
-                    updateQuadsFor(getQuadPosition(LQ->next),INSERTION);
-                    p = quadAfter(LQ,"+",LQ->op2,LQ->op2,LQ->res);
-                    n2--;
-                    while(n2>1){
-                        updateQuadsFor(getQuadPosition(p->next),INSERTION);
-                        p = quadAfter(p,"+",LQ->op2,LQ->res,LQ->res);
-                        n2--;
-                    }
-                    
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                    
-                }
-                
-            }
-            
-            LQ = LQ->next;
-            
-        }else if(!strcmp(LQ->opr,"+")){
-            if(isNumber(LQ->op1)){
-                int n = atoi(LQ->op1);
-                
-                if(n==0){
-                    replaceTempBy(LQ->res,LQ->op2);
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                }
-            }
-            if(isNumber(LQ->op2)){
-                int n = atoi(LQ->op2);
-                
-                if(n==0){
-                    replaceTempBy(LQ->res,LQ->op1);
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                    continue;
-                }
-            }
-                LQ = LQ->next;
-            
-        }else if(!strcmp(LQ->opr,"-")&&strcmp(LQ->op2,"")){
-            if(isNumber(LQ->op2)){
-                int n = atoi(LQ->op2);
-                
-                if(n==0){
-                    replaceTempBy(LQ->res,LQ->op1);
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                }else{
-                    LQ = LQ->next;
-                }
-            }else{
-                LQ = LQ->next;
-            }
-        }else if(!strcmp(LQ->opr,"/")){
-            if(isNumber(LQ->op2)){
-                int n = atoi(LQ->op2);
-                
-                if(n==1){
-                    replaceTempBy(LQ->res,LQ->op1);
-                    updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                    LQ = removeQuadRef(LQ);
-                }else{
-                    LQ = LQ->next;
-                }
-            }else{
-                LQ = LQ->next;
-            }
-        }else{
-            LQ = LQ->next;
-        }
-        
-    }
-}
-
-void variablePropagation(ListQuad LQ){
+void variablesPropagation(ListQuad LQ){
     ListQuad p;
     int mustPropage;
     
     while(LQ != NULL){    
-        if(isAssignationOperation(LQ)){
-            p = LQ->next;
+        if(estAffectation(LQ)){
+            p = LQ->suivant;
             mustPropage = 0;
-            while(p!=NULL&&(!isAssignationOperation(p)||strcmp(LQ->res,p->res))){
+            while(p!=NULL&&(!estAffectation(p)||strcmp(LQ->res,p->res))){
                 if(!strcmp(LQ->res,p->op1)){
                     p->op1 = strdup(LQ->op1);
                     mustPropage = 1;
@@ -419,43 +418,43 @@ void variablePropagation(ListQuad LQ){
                     mustPropage = 1;
                 }
                 
-                p = p->next;
+                p = p->suivant;
             }
             
             if(mustPropage){
-                updateQuadsFor(getQuadPosition(LQ),SUPPRESSION);
-                LQ = removeQuadRef(LQ);
+                modifierQuad(positionQuad(LQ),SUPPRESSION);
+                LQ = suppQuad(LQ);
             }else{
-                LQ = LQ->next;
+                LQ = LQ->suivant;
             }
         }else{
-           LQ = LQ->next; 
+           LQ = LQ->suivant; 
         }
         
     }
 }
 
 
-void redundantExpressions( ListQuad LQ){
+void expressionsRedondantes( ListQuad LQ){
     ListQuad p,q,s,r;
     char* temp1;
     char* temp2;
     int isConstant;
-    StackQuad SQ = NULL;
+    PileQuad SQ = NULL;
     
     while(LQ != NULL){    
-        if(!isArithmeticOperation(LQ)){        
-            LQ = LQ->next;
+        if(!estExpressionArithmetique(LQ)){        
+            LQ = LQ->suivant;
             continue;
         }
         
         p = LQ;
-        r = p->next;
+        r = p->suivant;
         q = r;
         
         while(r!=NULL){
             isConstant = 1;
-            while(p!=NULL&&q!=NULL&&!strcmp(p->opr,q->opr)&&isArithmeticOperation(p)){
+            while(p!=NULL&&q!=NULL&&!strcmp(p->opr,q->opr)&&estExpressionArithmetique(p)){
                 if(!strcmp(p->op1,q->op1)&&!strcmp(p->op2,q->op2)){
                     temp1 = strdup(p->res);
                     temp2 = strdup(q->res);
@@ -468,36 +467,36 @@ void redundantExpressions( ListQuad LQ){
                 }else{
                     break;
                 }
-                pushQuad(&SQ,q);
-                p = p->next;
-                q = q->next;
+                empilerQuad(&SQ,q);
+                p = p->suivant;
+                q = q->suivant;
             }
-            if(p!=NULL&&q!=NULL&&isAssignationOperation(p)&&isAssignationOperation(q)&&!isConstant){ //Expressions équivalentes
+            if(p!=NULL&&q!=NULL&&estAffectation(p)&&estAffectation(q)&&!isConstant){ //Expressions équivalentes
                 q->op1 = strdup(p->res);
-                while(!isEmptyQuad(SQ)){
-                    s = popQuad(&SQ);
-                    updateQuadsFor(getQuadPosition(s),SUPPRESSION);
-                    s = removeQuadRef(s);
+                while(!quadVide(SQ)){
+                    s = depilerQuad(&SQ);
+                    modifierQuad(positionQuad(s),SUPPRESSION);
+                    s = suppQuad(s);
                 }
                 p = LQ;
                 r = s;
                 q = r;
             }else{
-                while(!isEmptyQuad(SQ)){
-                    popQuad(&SQ);
+                while(!quadVide(SQ)){
+                    depilerQuad(&SQ);
                 }
                 p = LQ;
-                r = r->next;
+                r = r->suivant;
                 q = r;
             }
         }
         
-        LQ = LQ->next;
+        LQ = LQ->suivant;
     }
 }
 
 
-int isNumber(char* ch){
+int estNombre(char* ch){
     int i=0;
     while(i<strlen(ch)){
         if(!isdigit(ch[i])){
@@ -505,15 +504,15 @@ int isNumber(char* ch){
         }
         i++;
     }
-    return 1; //retourne 1
+    return 1;
 }
 
 
-ListQuad popQuad(StackQuad* S){
-    if(!isEmptyQuad(*S)){
-        StackQuad p = *S;
+ListQuad depilerQuad(PileQuad* S){
+    if(!quadVide(*S)){
+        PileQuad p = *S;
         ListQuad quad = p->quad;
-        *S = p->next;
+        *S = p->suivant;
         free(p);
         return quad;
     }
@@ -521,63 +520,38 @@ ListQuad popQuad(StackQuad* S){
     return NULL;
 }
 
-void pushQuad(StackQuad* S,ListQuad quad){
-    StackQuad newElement = (StackQuad) malloc(sizeof(ElementQ));
+void empilerQuad(PileQuad* S,ListQuad quad){
+    PileQuad nouvelElt = (PileQuad) malloc(sizeof(ElementQ));
 
-    newElement->quad = quad;
-    newElement->next = *S;
-    *S=newElement;
+    nouvelElt->quad = quad;
+    nouvelElt->suivant = *S;
+    *S=nouvelElt;
 }
 
-int isEmptyQuad(StackQuad S){
+int quadVide(PileQuad S){
     return S == NULL;
 }
 
-
-void setQuad(int qc,int pos,char* newValue){
-    int i=0;
-    ListQuad q = LQ;
-    
-    while(q != NULL && i<qc){
-        q = q->next;
-        i++;
-    }
-    
-  switch(pos){
-    case 1:
-      q->opr = newValue;
-      break;
-    case 2:
-      q->op1 = newValue;
-      break;
-    case 3:
-      q->op2 = newValue;
-      break;
-    case 4:
-      q->res = newValue;
-      break;
-  }
-}
 
 ListQuad removeQuad(char* opr, char* op1, char* op2){
     
     if(LQ!=NULL){
         if(!strcmp(LQ->opr,opr)&&!strcmp(LQ->op1,op1)&&!strcmp(LQ->op1,op2)){
             ListQuad temp = LQ;
-            LQ = LQ->next;
+            LQ = LQ->suivant;
             free(temp);
         }else{
             ListQuad p = LQ;
-            ListQuad q = LQ->next;
+            ListQuad q = LQ->suivant;
             
             while(q!=NULL){
                 if(!strcmp(LQ->opr,opr)&&!strcmp(LQ->op1,op1)&&!strcmp(LQ->op1,op2)){
-                    p->next = q->next;
+                    p->suivant = q->suivant;
                     free(q);
                     break;
                 }else{
                     p = q;
-                    q = q->next;
+                    q = q->suivant;
                 }
             }
         }
@@ -586,23 +560,23 @@ ListQuad removeQuad(char* opr, char* op1, char* op2){
     return LQ;
 }
 
-ListQuad removeQuadRef( ListQuad p){
+ListQuad suppQuad( ListQuad p){
     if(p!=NULL){
         if(p == LQ){
-            LQ = LQ->next;
+            LQ = LQ->suivant;
             free(p);
             return LQ;
         }else{
             ListQuad q = LQ;
             
-            while(q!=NULL && q->next != p){
-                q = q->next;
+            while(q!=NULL && q->suivant != p){
+                q = q->suivant;
             }
             
             if(q!=NULL){
-                q->next = p->next;
+                q->suivant = p->suivant;
                 free(p);
-                return q->next;
+                return q->suivant;
             }
         }
     }
@@ -610,60 +584,33 @@ ListQuad removeQuadRef( ListQuad p){
     return LQ;
 }
 
-ListQuad removeQuadAff(char* res){
-    
-    if(LQ!=NULL){
-        if(!strcmp(LQ->res,res)){
-            ListQuad temp = LQ;
-            LQ = LQ->next;
-            return LQ;
-            free(temp);
-        }else{
-            ListQuad p = LQ;
-            ListQuad q = LQ->next;
-            
-            while(q!=NULL){
-                if(!strcmp(q->res,res)){
-                    p->next = q->next;
-                    free(q);
-                    return p->next;
-                }else{
-                    p = q;
-                    q = q->next;
-                }
-            }
-        }
-    }
-    
-    return LQ;
-}
 
-ListQuad quadAfter(ListQuad p, char* opr,char* op1,char* op2,char* res){
+ListQuad quadSuiv(ListQuad p, char* opr,char* op1,char* op2,char* res){
     if(p!=NULL){
-        ListQuad newElement = (ListQuad) malloc(sizeof(ElementQuad));
+        ListQuad nouvelElt = (ListQuad) malloc(sizeof(ElementQuad));
 
-        newElement->opr = opr;
-        newElement->op1 = op1;
-        newElement->op2 = op2;
-        newElement->res = res;
-        newElement->next = p->next;
+        nouvelElt->opr = opr;
+        nouvelElt->op1 = op1;
+        nouvelElt->op2 = op2;
+        nouvelElt->res = res;
+        nouvelElt->suivant = p->suivant;
         
-        p->next = newElement;
+        p->suivant = nouvelElt;
         
-        return newElement;
+        return nouvelElt;
         
     }else{
         return NULL;
     }
 }
 
-int getQuadPosition(ListQuad p){
+int positionQuad(ListQuad p){
     int i=1;
     ListQuad q = LQ;
     
     while(q != NULL && q != p){
         i++;
-        q = q->next;
+        q = q->suivant;
     }
     
     if(q==NULL){
@@ -673,7 +620,7 @@ int getQuadPosition(ListQuad p){
     }
 }
 
-void replaceTempBy(char* oldTemp, char* newTemp){
+void remplacer(char* oldTemp, char* newTemp){
     ListQuad p = LQ;
     
     while(p!=NULL){
@@ -683,17 +630,17 @@ void replaceTempBy(char* oldTemp, char* newTemp){
             p->op2 = strdup(newTemp);
         }
         
-        p = p->next;
+        p = p->suivant;
     }
 }
 
-void updateQuadsFor(int pos, int action){
+void modifierQuad(int pos, int action){
     int i=1;
     ListQuad p = LQ;
     char ch[100];
     
     while(p!=NULL){
-        if(isJumpOperation(p)){
+        if(estBranchement(p)){
             int jumpLocation = atoi(p->op1);
 
             if(action==INSERTION){
@@ -713,47 +660,41 @@ void updateQuadsFor(int pos, int action){
         }
         
         i++;
-        p = p->next;
+        p = p->suivant;
     }
 }
 
 
-int isArithmeticOperation(ListQuad p){
+int estExpressionArithmetique(ListQuad p){
     return !strcmp(p->opr,"+")||!strcmp(p->opr,"-")||!strcmp(p->opr,"*")||!strcmp(p->opr,"/");
 }
 
-int isAssignationOperation(ListQuad p){
-    return !strcmp(p->opr,"=");
-}
-
-int isJumpOperation(ListQuad p){
-    return !strcmp(p->opr,"BR")||!strcmp(p->opr,"BE")||!strcmp(p->opr,"BNE")||!strcmp(p->opr,"BG")||!strcmp(p->opr,"BGE")||!strcmp(p->opr,"BL")||!strcmp(p->opr,"BLE");
-}
 
 
-qdr* ListeToTable(ListQuad LQ){
+
+qdr* convertirList(ListQuad LQ){
 
   int i=0;
     ListQuad q = LQ;
 
-    qdr* quadOBJ=malloc(qc*sizeof(qdr));
+    qdr* quadObj=malloc(qc*sizeof(qdr));
         while(q!=NULL){
 
   
 
 
-      strcpy(quadOBJ[i].oper , q->opr);
-      strcpy(quadOBJ[i].op1 , q->op1);
-      strcpy(quadOBJ[i].op2 , q->op2);
-      strcpy(quadOBJ[i].res , q->res);
+      strcpy(quadObj[i].oper , q->opr);
+      strcpy(quadObj[i].op1 , q->op1);
+      strcpy(quadObj[i].op2 , q->op2);
+      strcpy(quadObj[i].res , q->res);
 
       i++;
-        q = q->next;
+        q = q->suivant;
   }
 
 
 
-  return quadOBJ;
+  return quadObj;
 
 
 }
@@ -761,10 +702,10 @@ qdr* ListeToTable(ListQuad LQ){
 void generationCodeOBJ(){
 
 
-qdr* liste = ListeToTable(LQ);
+qdr* liste = convertirList(LQ);
 
   int i; 
- // FILE *f=fopen("CODEOBJ.txt","w");
+
   printf("****************** Le code Objet**********************\n");
 
   printf("CODE SEGEMENT\n");
@@ -851,7 +792,7 @@ qdr* liste = ListeToTable(LQ);
   printf("INT 21h\n");
   printf("CODE ENDS\n");
   printf("END MAIN\n");
-  //fclose(f);
+
 }
 
 
