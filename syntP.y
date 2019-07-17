@@ -156,7 +156,7 @@ OPERANDE: idf {$$.val=malloc(sizeof(20));sprintf($$.val,"%s",$1);}
 		|valE {$$.val=malloc(sizeof(20));sprintf($$.val,"%d",$1);}
 ;	
 		
-IF: mc_if CONDITION  dp retour TAB {printf(" un if\n");} INST  ELSEIF
+IF: mc_if CONDITION  dp retour TAB INST  ELSEIF
 
 ;
 ELIF: mc_elif CONDITION dp retour TAB INST{
@@ -188,7 +188,7 @@ main ()
 {
 	
 yyin=fopen("test.txt","r");
-if(yyin==NULL){ printf("erreur d'ouverture");}
+if(yyin==NULL){ printf("Erreur : Impossible d'ouvrir le fichier\n");}
 yyparse();
 afficher_qdr();
 convertirTab();
